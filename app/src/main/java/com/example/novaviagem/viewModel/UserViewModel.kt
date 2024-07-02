@@ -4,55 +4,48 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
+import com.example.novaviagem.dao.UserDao
 import com.example.novaviagem.dao.ViagemDao
 import com.example.novaviagem.db.AppDatabase
+import com.example.novaviagem.model.User
 import com.example.novaviagem.model.Viagem
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.util.Date
 
-class ViagemViewModelFactory(val db: AppDatabase) : ViewModelProvider.Factory {
+
+class UserViewModelFactory(val db: AppDatabase) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
-        return ViagemViewModel(db.viagemDao) as T
+        return UserViewModel(db.userDao) as T
     }
 }
 
-class ViagemViewModel(val viagemDao: ViagemDao): ViewModel() {
+class UserViewModel (val userDao: UserDao): ViewModel() {
 
-    private val _uiState = MutableStateFlow(Viagem())
-    val uiState: StateFlow<Viagem> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(User())
+    val uiState: StateFlow<User> = _uiState.asStateFlow()
 
-    fun updateDestino(destino: String) {
+    fun updateEmail(email: String) {
         _uiState.update {
-            it.copy(destino = destino)
+            it.copy(email = email)
         }
     }
-    fun updateTipo(tipo: String) {
+    fun updateUsername(username: String) {
         _uiState.update {
-            it.copy(tipo = tipo)
+            it.copy(username = username)
         }
     }
-    fun updateDataInicial(dataInicial: LocalDate) {
+    fun updatePassword(password: String) {
         _uiState.update {
-            it.copy(dataInicial = dataInicial)
-        }
-    }
-
-    fun updateDataFinal(dataFinal: LocalDate) {
-        _uiState.update {
-            it.copy(dataFinal = dataFinal)
+            it.copy(password = password)
         }
     }
 
-    fun updateOrcamento(orcamento: Double) {
-        _uiState.update {
-            it.copy(orcamento = orcamento)
-        }
-    }
     private fun updateId(id: Long) {
         _uiState.update {
             it.copy(id = id)
@@ -61,13 +54,13 @@ class ViagemViewModel(val viagemDao: ViagemDao): ViewModel() {
 
     private fun new() {
         _uiState.update {
-            it.copy(id = 0, destino = "", tipo = "", dataInicial = LocalDate.now(), dataFinal = LocalDate.now(),  orcamento = 0.0,)
+            it.copy(id = 0, username = "", email = "", password = "")
         }
     }
 
     fun save() {
         viewModelScope.launch {
-            val id = viagemDao.upsert(uiState.value)
+            val id = userDao.upsert(uiState.value)
             if (id > 0) {
                 updateId(id)
             }
@@ -79,6 +72,13 @@ class ViagemViewModel(val viagemDao: ViagemDao): ViewModel() {
         new()
     }
 
-    fun getAll() = viagemDao.getAll()
+    fun getAll() = userDao.getAll()
 
+    suspend fun login(email: String, password: String) : User? {
+        val deferred:Deferred<User?> = viewModelScope.async {
+            userDao.login(email, password)
+        }
+
+        return deferred.await()
+    }
 }
